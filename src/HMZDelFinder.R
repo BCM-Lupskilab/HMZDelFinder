@@ -223,7 +223,7 @@ prepareRPKMData <- function(fileNames, fids, mc.cores)
 ##'                    - start
 ##'                    - stop
 ##'                    - gene name
-##' @param rpkmDt  object created by prepareRPKMData  
+##' @param rpkmDt	 object returned by prepareRPKMData  
 ##------------------------------------------------------------------------------
 reorderBedAndRpkmDt <- function(bedFile, rpkmDt)
 {
@@ -421,7 +421,7 @@ annotateAOH <- function(candidatesMergedAnnotated, extAOH, aohSize, minAOHsig, m
 ##' Adds the information about overlapping calls (OverlapCnt column) to the list of candidates
 ##' 
 ##' 
-##' @param fil   object returned by mergeCandidates
+##' @param filteredCalls   object returned by annotateAOH
 ##------------------------------------------------------------------------------
 annotateFreq <- function(filteredCalls)
 {
@@ -526,18 +526,17 @@ plotDeletion <- function(calls, i, bedOrdered, rpkmDtOrdered,  outputDir  ){
 ##' Main function: return HMZ deletion calls 
 ##' 
 ##' 
-##' @param snpPaths - list of paths to VCFs with SNP data   
-##' @param snpFids   - list of sample identifiers (in the same order as provided in snpFileNames)
-##' @param rpkmPaths	- list of paths to RPKM data
-##' @param rpkmFids  - list of sample identifiers (in the same order as provided in rpkmPaths)
-##' @param mc.cores   - number of cores 
-##' @param aohRDataOut	- temporary file that store AOH data
-##' @param bedFile	- target design file
-##' @param lowRPKMthreshold   - RPKM threshold used in the algorithm (default=0.5)
-##' @param highRPKMthreshold - not used   
-##' @param minAOHsize  - minimal size of AOH region (default=1000)
-##' @param minAOHsig  - threshold for calling AOH (default=0.45)
-##' @param is_cmg   -  cpecific annotation for CMG samples (default=FALSE)
+##' @param snpPaths				list of paths to VCFs with SNP data   
+##' @param snpFids				list of sample identifiers (in the same order as in snpFileNames)
+##' @param rpkmPath				list of paths to RPKM data
+##' @param rpkmFids				list of sample identifiers (in the same order as in rpkmPaths)
+##' @param mc.cores				number of cores 
+##' @param aohRDataOut			temporary file that store AOH data
+##' @param bedFile				target design file
+##' @param lowRPKMthreshold		RPKM threshold used in the algorithm (default=0.5)
+##' @param minAOHsize			minimal size of AOH region (default=1000)
+##' @param minAOHsig			threshold for calling AOH (default=0.45)
+##' @param is_cmg				CMG specific annotations (default=FALSE)
 ##------------------------------------------------------------------------------
 
 runHMZDelFinder <- function(snpPaths, snpFids,
