@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>HMZDelFinder by tgambin</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/github-dark.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/tgambin/HMZDelFinder">View On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/tgambin/HMZDelFinder/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/tgambin/HMZDelFinder/tarball/master">TAR</a></li>
+          <li class="title">DOWNLOADS</li>
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>HMZDelFinder</h1>
+          <p>CNV calling algorithm for detection of homozygous and hemizygous deletions from whole exome sequencing data</p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/tgambin">tgambin</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="https://twitter.com/michigangraham">mattgraham</a></span>
+        </div>
+
+        <p><img src="https://en.wikipedia.org/wiki/File:Baylor_College_of_Medicine_Logo.png" alt="Baylor College of Medicine"></p>
+
+<h1>
+<a id="hmzdelfinder" class="anchor" href="#hmzdelfinder" aria-hidden="true"><span class="octicon octicon-link"></span></a>HMZDelFinder</h1>
+
+<p>CNV calling algorithm for detection of homozygous and hemizygous deletions from whole exome sequencing data</p>
+
+<h2>
+<a id="prerequisites" class="anchor" href="#prerequisites" aria-hidden="true"><span class="octicon octicon-link"></span></a>Prerequisites</h2>
+
+<p>Followin R libraries are required to run HMZDelFinder:</p>
+
+<ul>
+<li>gdata</li>
+<li>data.table</li>
+<li>DNAcopy</li>
+<li>GenomicRanges</li>
+<li>parallel</li>
+<li>Hmisc</li>
+</ul>
+
+<h2>
+<a id="running-hmzdelfinder" class="anchor" href="#running-hmzdelfinder" aria-hidden="true"><span class="octicon octicon-link"></span></a>Running HMZDelFinder</h2>
+
+<ol>
+<li>Download HMZDelFinder.R and example_run.R to your working directory</li>
+<li>Collect BAMs and VCFs for all samples you want to include in the analysis</li>
+<li>Generate RPKM files from BAMs (e.g. using utility provided by CoNIFER <a href="http://conifer.sourceforge.net/">http://conifer.sourceforge.net/</a>)</li>
+<li>Collect RPKM files in the single directory</li>
+<li>Obtain your design bed file </li>
+<li>In the example_run.R, replace paths (PATHS section) according to location of your data</li>
+<li>execute example_run.R</li>
+</ol>
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+    
+  </body>
+</html>
