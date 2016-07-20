@@ -44,8 +44,11 @@ read.vcf.header <- function(file){
 }
 read.vcf.quick.noinfo <- function(file){
 	header <- read.vcf.header(file)
-	system (paste("bzcat ",file," | tail -n +",header$nlines," | cut -f1-7,9,10 > " , file, ".noheader",  sep="" ))
-	data <- fread(paste(file , ".noheader", sep=""), header=FALSE, stringsAsFactors=F, sep="\t")
+	#system (paste("bzcat ",file," | tail -n +",header$nlines," | cut -f1-7,9,10 > " , file, ".noheader",  sep="" ))
+	#data <- fread(paste(file , ".noheader", sep=""), header=FALSE, stringsAsFactors=F, sep="\t")
+	
+	data <- fread(paste0(" bzcat ",file," | tail -n +",header$nlines," | cut -f1-7,9,10"), header=FALSE, stringsAsFactors=F, sep="\t")
+		
 	file.remove(paste (file, ".noheader", sep=""))
 	setnames(data, header$header[-9])
 	data
@@ -160,6 +163,7 @@ prepareAOHData <- function(fileNames, fids , mc.cores)
 	
 	aoh <- rbindlist(allAOH)
 	print ("Extending AOHs by length of uncertain regions ...")
+	#browser()
 	# extends AOH by length of uncertain regions; note that new segments will overlap
 	extAOH <- rbindlist(mclapply2(1:length(unique(aoh$Name)), function(i){ nm <- unique(aoh$Name)[i]
 						tmpAOH <- aoh[aoh$Name == nm,]
@@ -203,7 +207,7 @@ prepareRPKMData <- function(fileNames, fids, mc.cores)
 	print ("Removing empty elements ...")
 	rpkmList2 <- Filter(function(x){!is.null(x)}, rpkmList)
 	print ("Creating matrix ...")
-	rpkmDf <- do.call(rbind,mclapply2(rpkmList, function(x){x$V3}, mc.cores=mc.cores))
+	rpkmDf <- do.call(rbind,mclapply2(rpkmList, function(x){x$RPKM}, mc.cores=mc.cores))
 	rownames(rpkmDf) <- names(rpkmList2)
 	rm(rpkmList);rm(rpkmList2);gc();gc();
 	sn <- rownames(rpkmDf)
@@ -251,27 +255,28 @@ reorderBedAndRpkmDt <- function(bedFile, rpkmDt)
 ##' @param lowRPKMthreshold	RPKM threshold
 ##' @param maxFrequency 	max frequency of HMZ deletion
 ##------------------------------------------------------------------------------
-processRPKM <- function(rpkmDtOrdered, bedOrdered, mc.cores, lowRPKMthreshold = 0.5,  maxFrequency=0.005)
+processRPKM <- function(rpkmDtOrdered, bedOrdered, mc.cores, lowRPKMthreshold ,exonsToExclude,  maxFrequency=0.005)
 {
 	print("Computing initial statistics for each exon...")
 	a <- unlist(mclapply2(rpkmDtOrdered,function(x){sum(x<lowRPKMthreshold)}, mc.cores=mc.cores))
 	gc();gc();
 	maxHoms <- ceiling(nrow(rpkmDtOrdered)*maxFrequency)
-	selectedExons <- (which( a >0 & a <= maxHoms ))
+	selectedExons <- setdiff(which( a >0 & a <= maxHoms ) , exonsToExclude)
+	
 	print("Selecting a subset of exons with potentiall deletions (may take a while)...")
 	tmp <- rpkmDtOrdered[, selectedExons,with=F]
 	bedTmp <- bedOrdered[selectedExons,]
 	print("Calculating number of potential deletions for each sample (may take a while)...")
 	nrOfPotDeletions <- apply(tmp,1,  function(x){length( which(x<lowRPKMthreshold & bedTmp$V1 != "X"))})
 	print("Detetermining 5% of samples with the highest number of deletions")	
-	toRemSamples <- which(nrOfPotDeletions> quantile(nrOfPotDeletions, 0.95))
+	toRemSamples <- which(nrOfPotDeletions> quantile(nrOfPotDeletions, 0.98))
 	print("Removing these samples (may take a while)...")
 	rpkmTmp <- rpkmDtOrdered[-toRemSamples,]
 	print("Recomputing per-exon statistics without low quality samples ...")
 	a1 <- unlist(mclapply2(rpkmTmp,function(x){sum(x<lowRPKMthreshold)}, mc.cores=mc.cores))
 	rm(rpkmTmp)
 	gc();gc();
-	selectedExonsFinal <- (which( a1 >0 & a1 <= maxHoms ))
+	selectedExonsFinal <- setdiff((which( a1 >0 & a1 <= maxHoms )), exonsToExclude)
 	list(selectedExonsFinal=selectedExonsFinal, a=a, a1=a1, toRemSamples=toRemSamples)
 }
 
@@ -285,7 +290,7 @@ processRPKM <- function(rpkmDtOrdered, bedOrdered, mc.cores, lowRPKMthreshold = 
 ##' @param mc.cores				number of cores (see mclapply2)
 ##' @param lowRPKMthreshold		RPKM threshold
 ##------------------------------------------------------------------------------
-getCandidateExonCalls <- function(rpkmDtOrdered, bedOrdered, selectedExonsFinal,  mc.cores, lowRPKMthreshold=0.5)
+getCandidateExonCalls <- function(rpkmDtOrdered, bedOrdered, selectedExonsFinal,  mc.cores, lowRPKMthreshold)
 {
 	selectedExonsDT<- rpkmDtOrdered[,selectedExonsFinal,with=F]
 	print("Calling deletions")
@@ -342,7 +347,7 @@ mergeCandidates <- function(candidateExonCalls, bedOrdered, maxGap = 10)
 						v$mark_num <- v$mark_num+1 
 						v$V3 <-bedOrdered[bedOrderedIdx[j],"V3"] # replace stop
 						gn <- bedOrdered[bedOrderedIdx[j],"V4"] # gene name
-						if (trim(gn) != "" && !(gn %in% strsplit(v$V4,",")[[1]])){ v$V4 <- paste(v$V4, gn, sep=",")}
+						if (gdata::trim(gn) != "" && !(gn %in% strsplit(v$V4,",")[[1]])){ v$V4 <- paste(v$V4, gn, sep=",")}
 						v$exon_num <- bedOrderedIdx[j] - v$start_idx + 1
 						z <- bedOrdered[bedOrderedIdx[j],]
 					}
@@ -378,7 +383,7 @@ annotateCandidates <- function(candidatesMerged, is_cmg=FALSE)
 		report <- downloadReport()
 		report$Fid <- sapply(strsplit(report$Path, "_"), function(x){if (length(x)==0 | !isProperFid(x[length(x)])){return (NA)}; x[length(x)]})
 		report <- report[-which(is.na(report$Fid)),]
-		candidatesMerged$BAB <- report$Sample[match(candidatesMerged$FID, report$Fid)]
+		candidatesMerged$BAB <- report$Internal.Processing.Sample.ID[match(candidatesMerged$FID, report$Fid)]
 		candidatesMerged$project <- report$Metaproject[match(candidatesMerged$FID, report$Fid)]
 		candidatesMerged$BAB[is.na(candidatesMerged$BAB)] <- candidatesMerged$FID[is.na(candidatesMerged$BAB)]
 	}
@@ -432,17 +437,37 @@ annotateFreq <- function(filteredCalls)
 	filteredCalls 
 }
 
-
-
+##------------------------------------------------------------------------------
+##' Calculates average z-RPKM for each call	
+##------------------------------------------------------------------------------
+calculateZscores <- function(filteredCalls,rpkmDtOrdered){
+	mm <- as.matrix(rpkmDtOrdered)
+	zScores <- sapply(1:nrow(filteredCalls), function(i){
+				#print(i)
+				fid <- filteredCalls$FID[i]
+				sampleIdx <- which(rownames(rpkmDtOrdered) == fid)
+				position <- filteredCalls$Start_idx[i]
+				
+				mean(sapply(1:filteredCalls$Exon_num[i], function(j){
+									#print (paste0("j=", j))
+									val <- mm[sampleIdx, position + j -1 ]
+									vv <- sort(mm[-sampleIdx, position + j -1])
+									x<- c(val,vv)
+									(x[1] - mean(x))/sd(x)			
+								}))
+				
+			})
+	zScores
+}
 
 ##------------------------------------------------------------------------------
 ##' Adds legend to the plot (used internally by plotDeletion)
 ##------------------------------------------------------------------------------
-addLegend <- function(cand, trBlack)
+addLegend <- function(cand, trBlack, mainText="")
 {
 	par(xpd=NA)
 	tmp <- cnvrt.coords(.7,0.9, 'tdev')$usr
-	mainText <- paste(cand$BAB, " - ","chr",cand$Chr, ":" , cand$Start,"-", cand$Stop, " (",cand$Exon_num, " exons)" , sep="")
+	mainText <- paste(cand$BAB, " - ","chr",cand$Chr, ":" , cand$Start,"-", cand$Stop, " (",cand$Exon_num, " exons)" ,mainText, sep="")
 	title(mainText, outer=TRUE)
 	legend(tmp,
 			c("sample with deletion","lower and upper thresholds", "other samples", "samples with no AOH overlap" ),
@@ -461,11 +486,12 @@ addLegend <- function(cand, trBlack)
 ##' @param rpkmDtOrdered	rpkmDtOrdered object returned by runHMZDelFinder
 ##' @param outputDir		output directory
 ##------------------------------------------------------------------------------
-plotDeletion <- function(calls, i, bedOrdered, rpkmDtOrdered,  outputDir  ){
+plotDeletion <- function(calls, i, bedOrdered, rpkmDtOrdered,  outputDir, mainText=""  ){
+	library(Hmisc)
 	cand <- calls[i,]
 	alpha=0.5
 	window <-5
-	idx <- max(0,(cand$Start_idx-window)):min(ncol(rpkmDtOrdered),(cand$Start_idx + cand$Exon_num + window - 1))
+	idx <- max(1,(cand$Start_idx-window)):min(ncol(rpkmDtOrdered),(cand$Start_idx + cand$Exon_num + window - 1))
 	replaceInf <- function(x) {
 		dm <- data.matrix(x)
 		dm[!is.finite(dm)] <- 0
@@ -513,13 +539,22 @@ plotDeletion <- function(calls, i, bedOrdered, rpkmDtOrdered,  outputDir  ){
 	rect( cand$Start_idx  ,voffset + 0.05*vspace, cand$Start_idx  + cand$Exon_num - 1, voffset - 0.05*vspace, col="red", border="darkblue")
 	abline(v=cand$Start_idx , lty=2)
 	abline(v=cand$Start_idx + cand$Exon_num - 1  , lty=2)
-	addLegend(cand, trBlack)
+	addLegend(cand, trBlack, mainText)
 	dev.off()
 }
 
 
 
 
+printBanner <- function()
+{
+	cat("\n",
+			" _   _ __  __ _________       _ _____ _           _\n",           
+			"| | | |  \\/  |__  /  _ \\  ___| |  ___(_)_ __   __| | ___ _ __\n", 
+			"| |_| | |\\/| | / /| | | |/ _ \\ | |_  | | '_ \\ / _` |/ _ \\ '__|\n",
+			"|  _  | |  | |/ /_| |_| |  __/ |  _| | | | | | (_| |  __/ |\n",
+			"|_| |_|_|  |_/____|____/ \\___|_|_|   |_|_| |_|\\__,_|\\___|_|\n\n")  
+}	
 
 
 ##------------------------------------------------------------------------------
@@ -546,38 +581,50 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 		minAOHsize, minAOHsig, is_cmg)
 {
 	
+	
 	library(gdata)
 	library(data.table)
-	library(DNAcopy)
 	library(GenomicRanges)
 	library(parallel)
-	library(Hmisc)
+	library(matrixStats)
 	
+	printBanner()
+	print("[step 1 out of 7] ******  AOH data ******")
 	
-	print("[step 1 out of 8] ****** Preparing AOH data ******")
 	if (file.exists(aohRDataOut)){load(aohRDataOut)}else
 	{
+		print("[step 1.5 out of 7] ****** Preparing AOH data ******")
+		library(DNAcopy)
 		extAOH <- prepareAOHData(snpPaths, snpFids, mc.cores)
 		save(extAOH, file=aohRDataOut)
 	}
 	
-	print("[step 2 out of 8] ****** Preparing RPKM data ******")
-	rpkmDt <- prepareRPKMData(rpkmPaths, rpkmFids, 1)
+	print("[step 2 out of 7] ****** Preparing RPKM data ******")
+	selectedFidsIdx <- which(rpkmFids %in% extAOH$Name)
+	rpkmDt <- prepareRPKMData(rpkmPaths[selectedFidsIdx], rpkmFids[selectedFidsIdx], 1)
 	tmp <- reorderBedAndRpkmDt(bedFile, rpkmDt)
 	bedOrdered <- tmp$bedOrdered
 	rpkmDtOrdered <- tmp$rpkmDtOrdered
 	
-	print("[step 3 out of 8] ****** SELECTING CANDIDATE EXONS ******")
-	processRPKMResults <- processRPKM(rpkmDtOrdered, bedOrdered, mc.cores,lowRPKMthreshold=lowRPKMthreshold,maxFrequency=maxFrequency)
+	
+	
+	print("[step 3 out of 7] ****** SELECTING CANDIDATE EXONS ******")
+	#exonMedianRpkms <- colMedians(as.matrix(rpkmDtOrdered[,selectedExonsFinal,with=F]))
+	#selectedExonFinalMinusLow <- selectedExonsFinal[which (exonMedianRpkms > 7)]
+	exonMedianRpkms <- colMedians(as.matrix(rpkmDtOrdered[,,with=F]))
+	exonsToExclude <- which (exonMedianRpkms < 7)
+	gc()
+	processRPKMResults <- processRPKM(rpkmDtOrdered, bedOrdered, mc.cores,lowRPKMthreshold,exonsToExclude,maxFrequency=maxFrequency)
 	selectedExonsFinal <- processRPKMResults[["selectedExonsFinal"]]
 	
-	print("[step 4 out of 8] ****** DELETION CALLING ******")
-	candidateExonCalls <- getCandidateExonCalls (rpkmDtOrdered, bedOrdered, selectedExonsFinal, mc.cores,lowRPKMthreshold=lowRPKMthreshold)
 	
-	print("[step 5 out of 8] ****** MERGING CALLS FROM CONSECUTIVE EXONS ******")
+	print("[step 4 out of 7] ****** DELETION CALLING ******")
+	candidateExonCalls <- getCandidateExonCalls (rpkmDtOrdered, bedOrdered, selectedExonsFinal, mc.cores,lowRPKMthreshold)
+	
+	print("[step 5 out of 7] ****** MERGING CALLS FROM CONSECUTIVE EXONS ******")
 	candidatesMerged <- mergeCandidates(candidateExonCalls, bedOrdered)
 	
-	print("[step 6 out of 8] ****** ANNOTATING CALLS ******")
+	print("[step 6 out of 7] ****** ANNOTATING CALLS ******")
 	candidatesMergedAnnotated <- annotateCandidates (candidatesMerged, is_cmg) 
 	poorSamplesNames <- rownames(rpkmDtOrdered)[processRPKMResults$toRemSamples]
 	finalCandToRemoveIdx <- which(candidatesMergedAnnotated$FID %in% poorSamplesNames)
@@ -586,16 +633,22 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 	candidatesMergedAnnotated$posKey <- paste(candidatesMergedAnnotated$Chr, ":", candidatesMergedAnnotated$Start, "_", candidatesMergedAnnotated$Stop, sep="")
 	candidatesMergedAnnotated[,key:=paste(FID,"_",posKey,sep="")]
 	
-	print("[step 7 out of 8] ****** OVERLAPPING WITH AOH REGIONS ******")
+	print("[step 7 out of 7] ****** OVERLAPPING WITH AOH REGIONS AND FILTERING ******")
 	allCalls <- annotateAOH(candidatesMergedAnnotated, extAOH, minAOHsize, minAOHsig, mc.cores)
+	allCalls$ZScore <- calculateZscores(allCalls,rpkmDtOrdered)
+	wilcox.test(allCalls$ZScore[allCalls$inAOH_1000 & !allCalls$PoorSample], allCalls$ZScore[!allCalls$inAOH_1000 & !allCalls$PoorSample])
+	gc();gc();
 	allCalls <- allCalls [order(allCalls$Length, decreasing=T),]
 	
-	print("[step 8 out of 8] ****** FINAL FILTERING ******")
 	## filtering out calls from low quality samples and calls that do not overlap with any AOH region
-	filteredCalls <- allCalls[which(allCalls[,paste("inAOH_",minAOHsize,sep=""),with=F] & !allCalls$PoorSample),]
+	filteredCalls <- allCalls[which(allCalls[,paste("inAOH_",format(minAOHsize, scientific=F),sep=""),with=F] & !allCalls$PoorSample & allCalls$Length>50),]
 	filteredCalls <- annotateFreq(filteredCalls)
 	filteredCalls[,PerSampleNr:=.N,by=BAB]
+	filteredCalls$ZScore <- calculateZscores(filteredCalls,rpkmDtOrdered)
 	
-	return(list (filteredCalls = filteredCalls, allCalls=allCalls, bedOrdered = bedOrdered, rpkmDtOrdered = rpkmDtOrdered))
+	results <- list (filteredCalls = filteredCalls, allCalls=allCalls, bedOrdered = bedOrdered, rpkmDtOrdered = rpkmDtOrdered)
+	
+	
+	return(results)
 }
 
