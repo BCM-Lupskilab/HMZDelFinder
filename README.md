@@ -15,7 +15,7 @@ Followin R libraries are required to run HMZDelFinder:
 ## Running HMZDelFinder
 1. Download HMZDelFinder.R and example_run.R to your working directory
 2. Collect BAMs and VCFs for all samples you want to include in the analysis
-3. Generate RPKM files from BAMs (e.g. using utility provided by CoNIFER http://conifer.sourceforge.net/)
+3. Generate RPKM files from BAMs (e.g. using featureCount method from Rsubread R package)
 4. Collect RPKM files in the single directory
 5. Obtain your design bed file 
 6. In the example_run.R, replace paths (PATHS section) according to location of your data
