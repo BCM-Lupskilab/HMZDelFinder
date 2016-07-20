@@ -4,12 +4,12 @@
 #
 # See description of HMZDelFinder function for details
 ########################################
-is_cmg <- FALSE 		# only for CMG project - otherwhise use FALSE
-lowRPKMthreshold <- 0.5 # RPKM threshold 
-maxFrequency <- 0.005	# max frequncy of HMZ deletion
-minAOHsize <- 1000		# min AOH size
-minAOHsig <- 0.45		# min AOH signal threshold
-mc.cores=8 				# number of cores
+is_cmg <- FALSE 		 # only for CMG project - otherwhise use FALSE
+lowRPKMthreshold <- 0.65 # RPKM threshold 
+maxFrequency <- 0.005	 # max frequncy of HMZ deletion
+minAOHsize <- 1000		 # min AOH size
+minAOHsig <- 0.45		 # min AOH signal threshold
+mc.cores=8 				 # number of cores
 
 ########################################
 #  PATHS
