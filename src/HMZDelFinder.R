@@ -596,7 +596,7 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 	
 	## checking input parameters
 	if (!is.null(snpPaths) && any(!file.exists(snpPaths))){print("[ERROR]: One or more paths to VCF file does not exist."); return (NULL)}
-	if ( any(!file.exists(snpPaths))){print("[ERROR]: One or more paths to RPKM file does not exist."); return (NULL)}
+	if ( any(!file.exists(rpkmPaths))){print("[ERROR]: One or more paths to RPKM file does not exist."); return (NULL)}
 	if (!file.exists(bedFile)){print("[ERROR]: BED file does not exist.");return (NULL)}
 	if (length(rpkmPaths) != length(rpkmFids)){print("[ERROR]: Number of rpkmPaths differ from the number rpkmFids.");return (NULL)}
 	if (!is.null(snpPaths) && length(snpPaths) != length(snpFids)){print("[ERROR]: Number of vcfPaths differ from the number vcfFids.");return (NULL)}
