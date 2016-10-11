@@ -5,17 +5,16 @@
 # define working directory:
 workDir <- getwd() 
 # set project and data directory
-mainDir <- paste0(workDir ,"/HMZDelFinder/"); if (!dir.exists(mainDir)){dir.create(mainDir)}
-dataDir <- paste0(mainDir, "data/" , sep=""); if (!dir.exists(dataDir)){dir.create(dataDir)} # data directory
-# Load the source code 
-source("https://raw.githubusercontent.com/BCM-Lupskilab/HMZDelFinder/master/src/HMZDelFinder.R")
+mainDir <- paste0(workDir ,"/HMZDelFinder/"); if (!file.exists(mainDir)){dir.create(mainDir)}
+dataDir <- paste0(mainDir, "data/" , sep=""); if (!file.exists(dataDir)){dir.create(dataDir)} # data directory
+
 
 # Install missing packages
 list.of.packages <- c("RCurl", "gdata", "data.table", "parallel", "Hmisc", "matrixStats")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 biocLitePackages <- c("DNAcopy", "GenomicRanges")
-new.biocLitePackage <- list.of.packages[!(biocLitePackages %in% installed.packages()[,"Package"])]
+new.biocLitePackage <- biocLitePackages[!(biocLitePackages %in% installed.packages()[,"Package"])]
 if(length(new.biocLitePackage)) { source("http://bioconductor.org/biocLite.R"); biocLite(new.biocLitePackage)}
 
 # load packages
@@ -28,6 +27,9 @@ library(matrixStats)
 library(DNAcopy)
 library(GenomicRanges)
 
+# load HMZDelFinder source code
+# Note: source ("https://....")  does not work on some platforms
+eval( expr = parse( text = getURL("https://raw.githubusercontent.com/BCM-Lupskilab/HMZDelFinder/master/src/HMZDelFinder.R") ))
 
 # download RPKM data for 50 samples from 1000genomes
 if (!file.exists(paste0(dataDir, "TGP/"))){
@@ -44,12 +46,12 @@ if (!file.exists(paste0(dataDir, "tgp_hg19.bed"))){
 
 # set/create other paths and identifiers
 bedFile <- paste0(dataDir, "tgp_hg19.bed") # set path to BED file
-outputDir <- paste0(mainDir, "out/" , sep=""); if (!dir.exists(outputDir)){dir.create(outputDir)} # create output directory
-plotsDir <- paste0(mainDir, "plots/" , sep=""); if (!dir.exists(plotsDir)){dir.create(plotsDir)} # create output plots directory
+outputDir <- paste0(mainDir, "out/" , sep=""); if (!file.exists(outputDir)){dir.create(outputDir)} # create output directory
+plotsDir <- paste0(mainDir, "plots/" , sep=""); if (!file.exists(plotsDir)){dir.create(plotsDir)} # create output plots directory
 rpkmFiles <- dir(paste(dataDir, "TGP/",sep=""), "rpkm2.txt$")	# list of RPKM file names
 rpkmFids <- gsub(".rpkm2.txt", "", rpkmFiles) 					# list of sample identifiers
 rpkmPaths <- paste0(paste0(dataDir, "TGP/"), rpkmFiles) 		# list of paths to RPKM files
-aohDir <- paste0(mainDir, "AOH/" , sep=""); if (!dir.exists(aohDir)){dir.create(aohDir)} 
+aohDir <- paste0(mainDir, "AOH/" , sep=""); if (!file.exists(aohDir)){dir.create(aohDir)} 
 aohRDataOut <- paste(mainDir, "AOH/extAOH_small.RData", sep="")	# temprary file to store AOH data
 
 
