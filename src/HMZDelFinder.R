@@ -46,15 +46,23 @@ read.vcf.quick.noinfo <- function(file){
 	header <- read.vcf.header(file)
 	#system (paste("bzcat ",file," | tail -n +",header$nlines," | cut -f1-7,9,10 > " , file, ".noheader",  sep="" ))
 	#data <- fread(paste(file , ".noheader", sep=""), header=FALSE, stringsAsFactors=F, sep="\t")
-	
 	data <- fread(paste0(" bzcat ",file," | tail -n +",header$nlines," | cut -f1-7,9,10"), header=FALSE, stringsAsFactors=F, sep="\t")
-		
 	file.remove(paste (file, ".noheader", sep=""))
 	setnames(data, header$header[-9])
 	data
 }
 
 ## end of functions for reading vcf
+
+## download file from dropbox
+dl_from_dropbox <- function(x, key, out) {	
+	print (paste0("Downloading from dropbox:" , x))
+	bin <- getBinaryURL(paste0("https://dl.dropboxusercontent.com/s/", key, "/", x),ssl.verifypeer = FALSE)
+	con <- file(x, open = "wb")
+	writeBin(bin, con)
+	close(con)
+}
+
 
 ##------------------------------------------------------------------------------
 ##' Wrapper around mclapply to track progress
@@ -143,8 +151,8 @@ prepareAOHData <- function(fileNames, fids , mc.cores)
 							dataSNP <- read.vcf.quick.noinfo(fileSNP)
 							# parsing genotype
 							gt<- do.call(rbind, strsplit(dataSNP[[9]], ":"))
-							vR <- gt[,2]
-							tR <- gt[,4]
+							vR <- gt[,2] # number of alt allele reads
+							tR <- gt[,4] # total number of reads
 							dataSNP[,vR:=as.numeric(vR)]
 							dataSNP[,tR:=as.numeric(tR)]
 							dataSNP[,af:=(as.numeric(vR)/ as.numeric(tR))]
@@ -403,6 +411,10 @@ annotateCandidates <- function(candidatesMerged, is_cmg=FALSE)
 ##------------------------------------------------------------------------------
 
 annotateAOH <- function(candidatesMergedAnnotated, extAOH, aohSize, minAOHsig, mc.cores){
+	if (is.null(extAOH)){
+		candidatesMergedAnnotated[,paste("inAOH", "_", format(aohSize, scientific=F), sep="")] <- TRUE
+		return (candidatesMergedAnnotated)
+	}
 	tmpRes <- mclapply2((1:length(unique(candidatesMergedAnnotated$FID))), function(i){ fid <- unique(candidatesMergedAnnotated$FID)[i]
 				tmpCand <- candidatesMergedAnnotated[candidatesMergedAnnotated$FID == fid,]
 				tmpCand [,paste("inAOH", "_", format(aohSize, scientific=F), sep="")] <- FALSE
@@ -561,8 +573,8 @@ printBanner <- function()
 ##' Main function: return HMZ deletion calls 
 ##' 
 ##' 
-##' @param snpPaths				list of paths to VCFs with SNP data   
-##' @param snpFids				list of sample identifiers (in the same order as in snpFileNames)
+##' @param snpPaths				list of paths to VCFs with SNP data; if NULL algorithm skips AOH analysis
+##' @param snpFids				list of sample identifiers (in the same order as in snpFileNames); if NULL algorithm skips AOH analysis
 ##' @param rpkmPath				list of paths to RPKM data
 ##' @param rpkmFids				list of sample identifiers (in the same order as in rpkmPaths)
 ##' @param mc.cores				number of cores 
@@ -582,6 +594,13 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 {
 	
 	
+	## checking input parameters
+	if (!is.null(snpPaths) && any(!file.exists(snpPaths))){print("[ERROR]: One or more paths to VCF file does not exist."); return (NULL)}
+	if ( any(!file.exists(snpPaths))){print("[ERROR]: One or more paths to RPKM file does not exist."); return (NULL)}
+	if (!file.exists(bedFile)){print("[ERROR]: BED file does not exist.");return (NULL)}
+	if (length(rpkmPaths) != length(rpkmFids)){print("[ERROR]: Number of rpkmPaths differ from the number rpkmFids.");return (NULL)}
+	if (!is.null(snpPaths) && length(snpPaths) != length(snpFids)){print("[ERROR]: Number of vcfPaths differ from the number vcfFids.");return (NULL)}
+	
 	library(gdata)
 	library(data.table)
 	library(GenomicRanges)
@@ -591,26 +610,33 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 	printBanner()
 	print("[step 1 out of 7] ******  AOH data ******")
 	
-	if (file.exists(aohRDataOut)){load(aohRDataOut)}else
-	{
-		print("[step 1.5 out of 7] ****** Preparing AOH data ******")
-		library(DNAcopy)
-		extAOH <- prepareAOHData(snpPaths, snpFids, mc.cores)
-		save(extAOH, file=aohRDataOut)
+	extAOH <- NULL
+	if (is.null(snpPaths) || is.null(snpFilds)){
+		print("Skipping AOH analysis ...")
+		
 	}
-	
+	else{
+		#if (file.exists(aohRDataOut)){load(aohRDataOut)}else
+		#{
+			print("[step 1.5 out of 7] ****** Preparing AOH data ******")
+			library(DNAcopy)
+			extAOH <- prepareAOHData(snpPaths, snpFids, mc.cores)
+			save(extAOH, file=aohRDataOut)
+		#}
+		
+	}
+		
 	print("[step 2 out of 7] ****** Preparing RPKM data ******")
-	selectedFidsIdx <- which(rpkmFids %in% extAOH$Name)
+	selectedFidsIdx <- 1:length(rpkmFids)
+	if (!is.null(extAOH)) {
+		selectedFidsIdx <- which(rpkmFids %in% extAOH$Name)
+	}
 	rpkmDt <- prepareRPKMData(rpkmPaths[selectedFidsIdx], rpkmFids[selectedFidsIdx], 1)
 	tmp <- reorderBedAndRpkmDt(bedFile, rpkmDt)
 	bedOrdered <- tmp$bedOrdered
 	rpkmDtOrdered <- tmp$rpkmDtOrdered
 	
-	
-	
 	print("[step 3 out of 7] ****** SELECTING CANDIDATE EXONS ******")
-	#exonMedianRpkms <- colMedians(as.matrix(rpkmDtOrdered[,selectedExonsFinal,with=F]))
-	#selectedExonFinalMinusLow <- selectedExonsFinal[which (exonMedianRpkms > 7)]
 	exonMedianRpkms <- colMedians(as.matrix(rpkmDtOrdered[,,with=F]))
 	exonsToExclude <- which (exonMedianRpkms < 7)
 	gc()
@@ -636,7 +662,6 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 	print("[step 7 out of 7] ****** OVERLAPPING WITH AOH REGIONS AND FILTERING ******")
 	allCalls <- annotateAOH(candidatesMergedAnnotated, extAOH, minAOHsize, minAOHsig, mc.cores)
 	allCalls$ZScore <- calculateZscores(allCalls,rpkmDtOrdered)
-	wilcox.test(allCalls$ZScore[allCalls$inAOH_1000 & !allCalls$PoorSample], allCalls$ZScore[!allCalls$inAOH_1000 & !allCalls$PoorSample])
 	gc();gc();
 	allCalls <- allCalls [order(allCalls$Length, decreasing=T),]
 	
@@ -647,7 +672,6 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 	filteredCalls$ZScore <- calculateZscores(filteredCalls,rpkmDtOrdered)
 	
 	results <- list (filteredCalls = filteredCalls, allCalls=allCalls, bedOrdered = bedOrdered, rpkmDtOrdered = rpkmDtOrdered)
-	
 	
 	return(results)
 }
