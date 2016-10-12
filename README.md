@@ -52,12 +52,11 @@ In general, VCF should follow the standard VCF format, however, the following co
 
 * CHROM   <i>// Chromosome</i>
 * POS     <i>// Position<i/>
-* FILTER // ONLY variants with "PASS" in the filter column are used for AOH analysis
-* FORMAT // 8-th VCF column containing definition of the last column
-* SAMPLE // 9-th VCF column with the information on the read depth and allelic depth
+* FILTER <i>// Only variants with "PASS" in the FILTER column are used for AOH analysis. </i>
+* FORMAT <i>// 9-th VCF column containing definition of the last column</i>
+* SAMPLE <i>// 10-th VCF column with the genotype data and the information on the total number of reads ('DP') and the number of variant reads (e.g. 'VR')</i>
 
-
-
+NOTE: Please note that to calculate B-allele frequency (needed for AOH analysis) it is required that in the last  column of VCF, both total number of reads and the number of variant reads are reported for every variant. Moreover, all multiallelic sites should be filtered out. Such VCFs can be generated, e.g. by Atlas2 variant caller.
 
 
 ## Format of output files
