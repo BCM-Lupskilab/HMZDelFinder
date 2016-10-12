@@ -51,7 +51,7 @@ We assume that all files are single sample VCFs compressed with bz2.
 In general, VCF should follow the standard VCF format, however, the following columns are the most important:
 
 * CHROM   <i>// Chromosome</i>
-* POS     <i>// Position<i/>
+* POS     <i>// Position</i>
 * FILTER <i>// Only variants with "PASS" in the FILTER column are used for AOH analysis. </i>
 * FORMAT <i>// 9-th VCF column containing definition of the last column</i>
 * SAMPLE <i>// 10-th VCF column with the genotype data and the information on the total number of reads ('DP') and the number of variant reads (e.g. 'VR')</i>
