@@ -13,7 +13,7 @@ dataDir <- paste0(mainDir, "data/" , sep=""); if (!file.exists(dataDir)){dir.cre
 list.of.packages <- c("RCurl", "gdata", "data.table", "parallel", "Hmisc", "matrixStats")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
-biocLitePackages <- c("DNAcopy", "GenomicRanges")
+biocLitePackages <- c("DNAcopy", "GenomicRanges", "Rsubread")
 new.biocLitePackage <- biocLitePackages[!(biocLitePackages %in% installed.packages()[,"Package"])]
 if(length(new.biocLitePackage)) { source("http://bioconductor.org/biocLite.R"); biocLite(new.biocLitePackage)}
 
@@ -26,10 +26,14 @@ library(Hmisc)
 library(matrixStats)
 library(DNAcopy)
 library(GenomicRanges)
+library(Rsubread)
 
 # load HMZDelFinder source code
 # Note: source ("https://....")  does not work on some platforms
 eval( expr = parse( text = getURL("https://raw.githubusercontent.com/BCM-Lupskilab/HMZDelFinder/master/src/HMZDelFinder.R") ))
+
+
+
 
 # download RPKM data for 50 samples from 1000genomes
 if (!file.exists(paste0(dataDir, "TGP/"))){
@@ -54,16 +58,30 @@ rpkmPaths <- paste0(paste0(dataDir, "TGP/"), rpkmFiles) 		# list of paths to RPK
 aohDir <- paste0(mainDir, "AOH/" , sep=""); if (!file.exists(aohDir)){dir.create(aohDir)} 
 aohRDataOut <- paste(mainDir, "AOH/extAOH_small.RData", sep="")	# temprary file to store AOH data
 
+############
+## NOTE 1 ## 
+############
+## To use own WES data and create RPKM files from BAM files use the calcRPKMsFromBAMs function.
+## e.g:
+#pathToBams <- "/your/path/to/bamfiles/" 
+#bamFiles <- paste0(pathToBams, dir(pathToBams, "bam$"))
+#rpkmDir <- dataDir  # place to store RPKM files
+#sampleNames <- sapply(strsplit(dir(pathToBams, "bam$"), "[/\\.]"), function(x){x[length(x)-1]}) # sample identifiers
+#calcRPKMsFromBAMs(bedFile,bamFiles , sampleNames, rpkmDir,4)
+##
 
-# In this example, we are not performing AOH filtering and VCF files are not required.
-# If one wants to perform AOH filtering than have to provide:
-# vcfPaths - the list of paths to VCF files
-# vcfFids - the list of sample identifiers that corresponds to VCF files (same order)
-
-#snpFiles <- dir (inputDir,"SNPs_Annotated.vcf.bz2$", recursive=T, include.dirs=FALSE)
-#vcfFids <- sapply(strsplit(snpFiles,"[/\\.]"), function(x){x[2]})
-#vcfPaths<- paste(inputDir,vcfNames,"/", sapply(strsplit(snpFiles,"/"), function(x){x[2]}), sep="")
-
+############
+## NOTE 2 ## 
+############
+## In this example, we are not performing AOH filtering and VCF files are not required.
+## If one wants to perform AOH filtering than need to prepare two lists:
+## vcfPaths - the list of paths to VCF files
+## vcfFids - the list of sample identifiers that corresponds to VCF files (same order)
+## e.g.:
+# vcfFiles <- dir (vcfDir,"vcf.bz2$", recursive=T, include.dirs=FALSE)
+# vcfFids <- sapply(strsplit(vcfFiles,"[/\\.]"), function(x){x[2]})
+# vcfPaths<- paste0(inputDir,vcfFids,"/", sapply(strsplit(snpFiles,"/"), function(x){x[2]}), sep="")
+##
 
 
 ########################################
@@ -114,6 +132,3 @@ lapply(1:nrow(results$filteredCalls),function(i){
 #					9:   5  42629139  42629205     GHR    130161 NA19213
 #					10:  16  55866915  55866967    CES1     64208 NA18553
 ## NOTE: Deletions of CES1, CFHR1 and OR13C9 are located within segmental duplications
-
-
-					
