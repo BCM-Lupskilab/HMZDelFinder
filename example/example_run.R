@@ -4,7 +4,8 @@
 
 # define working directory:
 workDir <- getwd() 
-# set project and data directory
+# set project and data directory 
+# replace mainDir with the location you want to store experiment results
 mainDir <- paste0(workDir ,"/HMZDelFinder/"); if (!file.exists(mainDir)){dir.create(mainDir)}
 dataDir <- paste0(mainDir, "data/" , sep=""); if (!file.exists(dataDir)){dir.create(dataDir)} # data directory
 
@@ -62,7 +63,7 @@ aohRDataOut <- paste(mainDir, "AOH/extAOH_small.RData", sep="")	# temprary file 
 ############
 ## NOTE 1 ## 
 ############
-## To use own WES data and create RPKM files from BAM files use the calcRPKMsFromBAMs function.
+## To use own WES data and create RPKM files from BAM files one can use calcRPKMsFromBAMs function.
 ## e.g:
 #pathToBams <- "/your/path/to/bamfiles/" 
 #bamFiles <- paste0(pathToBams, dir(pathToBams, "bam$"))
@@ -95,9 +96,10 @@ lowRPKMthreshold <- 0.65# RPKM threshold
 maxFrequency <- 0.05	# max frequncy of HMZ deletion; default =0.005
 minAOHsize <- 1000		# min AOH size
 minAOHsig <- 0.45		# min AOH signal threshold
-mc.cores=4 				# number of cores
-
-
+mc.cores<-4 				# number of cores
+vR_id<-"VR"				# ID from VCF FORMAT indicating the number of variant reads, for other variant callers could be "AD"
+tR_id<-"DP"				# ID from VCF FORMAT indicating the number total reads 
+filter <- "PASS"		# for other variant callers be  '.'
 
 # running HMZDelFinder
 results <- runHMZDelFinder (NULL,		# vcfPaths - paths to VCF files for AOH analysis (not used for 1000 genomes) 
@@ -110,7 +112,10 @@ results <- runHMZDelFinder (NULL,		# vcfPaths - paths to VCF files for AOH analy
 							lowRPKMthreshold, #  RPKM threshold 
 							minAOHsize, # min AOH size
 							minAOHsig,	# min AOH signal threshold
-							is_cmg)		# flag used for CMG specific annotations; TRUE samples are from BHCMG cohort, FALSE otherwhise
+							is_cmg,		# flag used for CMG specific annotations; TRUE samples are from BHCMG cohort, FALSE otherwhise
+							vR_id, 		# ID for 'the number of variants reads' in VCF FORMAT column (default='VR');
+							tR_id,		# ID for 'the number of total reads' in VCF FORMAT column (default='DP')
+							filter)		# only variants with this value in the VCF FILTER column will be used in AOH analysis 
 					
 					
 # saving results in csv files
@@ -132,7 +137,7 @@ lapply(1:nrow(results$filteredCalls),function(i){
 #					8:   5  42629139  42629205     GHR    130161 NA12342
 #					9:   5  42629139  42629205     GHR    130161 NA19213
 #					10:  16  55866915  55866967    CES1     64208 NA18553
-## NOTE: Deletions of CES1, CFHR1 and OR13C9 are located within segmental duplications
+## NOTE: Deletions of CES1, CFHR1 and OR13C9 are located within segmental duplications, and thus they were not reported in the manuscript
 
 
 					
