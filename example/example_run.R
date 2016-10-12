@@ -1,5 +1,5 @@
 ############################################################
-# Running the HMZDelFinder on 50 samples from 1000 genomes #
+# Running HMZDelFinder on 50 samples from 1000 genomes #
 ############################################################
 
 # define working directory:
@@ -9,11 +9,15 @@ mainDir <- paste0(workDir ,"/HMZDelFinder/"); if (!file.exists(mainDir)){dir.cre
 dataDir <- paste0(mainDir, "data/" , sep=""); if (!file.exists(dataDir)){dir.create(dataDir)} # data directory
 
 
-# Install missing packages
+# Install missing packages from CRAN
 list.of.packages <- c("RCurl", "gdata", "data.table", "parallel", "Hmisc", "matrixStats")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
-biocLitePackages <- c("DNAcopy", "GenomicRanges", "Rsubread")
+
+
+# Install missing packages from Bioconductor
+# Note: for Windows users: Rsubread has to be installed from file  
+biocLitePackages <- c("DNAcopy", "GenomicRanges", "Rsubread") 
 new.biocLitePackage <- biocLitePackages[!(biocLitePackages %in% installed.packages()[,"Package"])]
 if(length(new.biocLitePackage)) { source("http://bioconductor.org/biocLite.R"); biocLite(new.biocLitePackage)}
 
@@ -26,14 +30,11 @@ library(Hmisc)
 library(matrixStats)
 library(DNAcopy)
 library(GenomicRanges)
-library(Rsubread)
+library(Rsubread) 
 
 # load HMZDelFinder source code
 # Note: source ("https://....")  does not work on some platforms
 eval( expr = parse( text = getURL("https://raw.githubusercontent.com/BCM-Lupskilab/HMZDelFinder/master/src/HMZDelFinder.R") ))
-
-
-
 
 # download RPKM data for 50 samples from 1000genomes
 if (!file.exists(paste0(dataDir, "TGP/"))){
@@ -132,3 +133,6 @@ lapply(1:nrow(results$filteredCalls),function(i){
 #					9:   5  42629139  42629205     GHR    130161 NA19213
 #					10:  16  55866915  55866967    CES1     64208 NA18553
 ## NOTE: Deletions of CES1, CFHR1 and OR13C9 are located within segmental duplications
+
+
+					
