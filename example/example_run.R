@@ -38,12 +38,18 @@ library(Rsubread)
 eval( expr = parse( text = getURL("https://raw.githubusercontent.com/BCM-Lupskilab/HMZDelFinder/master/src/HMZDelFinder.R") ))
 
 # download RPKM data for 50 samples from 1000genomes
+# if this does not work, the file can be downloaded from:
+# https://www.dropbox.com/s/6y14wftyhh6r2j0/TGP.tar.gz?dl=0
+# and uncompressed manually into dataDir folder
 if (!file.exists(paste0(dataDir, "TGP/"))){
 	if (file.exists(paste0(dataDir, "TGP.tar.gz")))file.remove(paste0(dataDir, "TGP.tar.gz"))
 	dl_from_dropbox( paste0(dataDir, "TGP.tar.gz"), "6y14wftyhh6r2j0")
 	untar(paste0(dataDir, "TGP.tar.gz"), exdir = dataDir)
 }
 # download BED file
+# if this does not work, the file can be downloaded from:
+# https://www.dropbox.com/s/1v5jbbm2r809ssy/tgp_hg19.bed.tar.gz?dl=0
+# and uncompressed manually into dataDir folder
 if (!file.exists(paste0(dataDir, "tgp_hg19.bed"))){ 
 	if (file.exists(paste0(dataDir, "tgp_hg19.bed.tar.gz"))){file.remove(paste0(dataDir, "tgp_hg19.bed.tar.gz"))}
 	dl_from_dropbox( paste0(dataDir, "tgp_hg19.bed.tar.gz"), "1v5jbbm2r809ssy")
