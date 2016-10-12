@@ -5,6 +5,7 @@ CNV calling algorithm for detection of rare, homozygous and hemizygous deletions
 
 ## Prerequisites
 * R in version >= 3.0.1 
+
 Following R libraries are required to run HMZDelFinder:
  * RCurl (version >= 1.95.4.7)
  * gdata (version >= 2.17.0)
