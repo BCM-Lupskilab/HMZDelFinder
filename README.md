@@ -47,6 +47,15 @@ To generate RPKM files from BAM files, see comments at example/example_run.R.
 ### VCF files
 
 VCF files are required for AOH analysis and further filtering of identfied deletion calls. 
+We assume that all files are single sample VCFs compressed with bz2. 
+In general, VCF should follow the standard VCF format, however, the following columns are the most important:
+
+* CHROM   <i>// Chromosome</i>
+* POS     <i>// Position<i/>
+* FILTER // ONLY variants with "PASS" in the filter column are used for AOH analysis
+* FORMAT // 8-th VCF column containing definition of the last column
+* SAMPLE // 9-th VCF column with the information on the read depth and allelic depth
+
 
 
 
