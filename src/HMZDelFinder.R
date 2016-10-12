@@ -64,6 +64,50 @@ dl_from_dropbox <- function(x, key, out) {
 }
 
 
+
+##------------------------------------------------------------------------------
+##' Calculate RPKMs from BAM files
+##' NOTE: Index files (.bai) should be available for each BAM file
+##' 
+##' 
+##' @param bedFile    tab separeated bed file containing capture design probes with the following 4 columns:
+##'                    - chromosme
+##'                    - start
+##'                    - stop
+##'                    - gene name
+##' @param bamFiles	  	  vector of paths to bam files  
+##' @param sampleNames	  vector of sample identifiers
+##' @param outputDir	  output directory
+##' @param mc.cores	      number of cores
+##------------------------------------------------------------------------------
+
+calcRPKMsFromBAMs <- function (bedFile, bamFiles, sampleNames, outputDir, mc.cores)
+{
+	library(Rsubread)
+	library(data.table)
+	library(parallel)
+	
+	bed <- fread(bedFile)
+	df <- data.frame(cbind(1:nrow(bed), bed))
+	colnames(df) <- c("GeneID", "Chr", "Start", "End", "Strand")
+	if (!file.exists(outputDir)){dir.create(outputDir)}
+	
+	out <- mclapply(1:length(bamFiles), function(i){
+				gc();gc();
+				file <- bamFiles[i]
+				prefix <- sampleNames[i]
+				outputFile <- paste0(outputDir, prefix, "_rpkm2.txt")
+				res <-  featureCounts(files=file, annot.ext=df, allowMultiOverlap=TRUE, nthreads=3)
+				total <- sum(res$stat[2])
+				counts <- data.frame(res$counts)
+				colnames(counts) <- "count"
+				counts$RPKM <-  as.numeric(1e9 * as.numeric(counts$count)) / as.numeric(as.numeric(df$End - df$Start) * as.numeric(total))
+				write.table(counts, file=outputFile, sep="\t", col.names=T, row.names=F, quote=F)
+			},mc.cores=mc.cores)
+	
+}
+
+
 ##------------------------------------------------------------------------------
 ##' Wrapper around mclapply to track progress
 ##' 
@@ -499,7 +543,7 @@ addLegend <- function(cand, trBlack, mainText="")
 ##' @param outputDir		output directory
 ##------------------------------------------------------------------------------
 plotDeletion <- function(calls, i, bedOrdered, rpkmDtOrdered,  outputDir, mainText=""  ){
-	library(Hmisc)
+	#library(Hmisc)
 	cand <- calls[i,]
 	alpha=0.5
 	window <-5
@@ -593,6 +637,11 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 		minAOHsize, minAOHsig, is_cmg)
 {
 	
+	library(gdata)
+	library(data.table)
+	library(GenomicRanges)
+	library(parallel)
+	library(matrixStats)
 	
 	## checking input parameters
 	if (!is.null(snpPaths) && any(!file.exists(snpPaths))){print("[ERROR]: One or more paths to VCF file does not exist."); return (NULL)}
@@ -601,11 +650,6 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 	if (length(rpkmPaths) != length(rpkmFids)){print("[ERROR]: Number of rpkmPaths differ from the number rpkmFids.");return (NULL)}
 	if (!is.null(snpPaths) && length(snpPaths) != length(snpFids)){print("[ERROR]: Number of vcfPaths differ from the number vcfFids.");return (NULL)}
 	
-	library(gdata)
-	library(data.table)
-	library(GenomicRanges)
-	library(parallel)
-	library(matrixStats)
 	
 	printBanner()
 	print("[step 1 out of 7] ******  AOH data ******")
