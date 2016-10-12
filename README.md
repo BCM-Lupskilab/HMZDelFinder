@@ -22,6 +22,7 @@ To install missing packages, run the code from the appropriate sections ('instal
 ## Running HMZDelFinder
 
 * Working example that runs HMZDelFinder on 50 samples from 1000 genomes is available at example/example_run.R
+* The code was tested on Linux platforms and may not work properly on other platforms.
 
 ## Format of input files
 
