@@ -42,13 +42,21 @@ read.vcf.header <- function(file){
 	format <-  getSubHeader( "FORMAT=<", lines)
 	list (header=strsplit(lines[length(lines)], "\t")[[1]], INFO=info,FORMAT =format, nlines=length(lines) + 1)
 }
-read.vcf.quick.noinfo <- function(file){
+
+
+read.vcf.quick.noinfo <- function(file, vR_id ,tR_id ,filter ){
 	header <- read.vcf.header(file)
-	#system (paste("bzcat ",file," | tail -n +",header$nlines," | cut -f1-7,9,10 > " , file, ".noheader",  sep="" ))
-	#data <- fread(paste(file , ".noheader", sep=""), header=FALSE, stringsAsFactors=F, sep="\t")
-	data <- fread(paste0(" bzcat ",file," | tail -n +",header$nlines," | cut -f1-7,9,10"), header=FALSE, stringsAsFactors=F, sep="\t")
-	file.remove(paste (file, ".noheader", sep=""))
-	setnames(data, header$header[-9])
+	data <- fread(paste0(" bzcat ",file," | tail -n +",header$nlines," | cut -f1-7,9,10"), header=FALSE, stringsAsFactors=F, sep="\t")	
+	setnames(data, header$header[-8])
+	
+	data <- data[which(data$FILTER == filter),]
+	tab <- strsplit(data[,"FORMAT",with=F][[1]], ":") #FORMAT
+	tab2 <- strsplit(data[,ncol(data),with=F][[1]], ":") # SAMPLE
+	
+	vRtR <- do.call(rbind, lapply(1:length(tab), function(i){tab2[[i]][c(which(tab[[i]] == vR_id), which(tab[[i]]==tR_id))]}))
+	data$vR <- as.numeric(vRtR[,1])
+	data$tR <- as.numeric(vRtR[,2])
+	#data$vR <- sapply(1:length(tab2), function(i){tab2[[i]][vRidx[i]]})
 	data
 }
 
@@ -184,7 +192,7 @@ mclapply2 <- function(X, FUN, ...,
 ##' @param fids			a vector of  sample names of the same length as fileName
 ##' @param mc.cores		number of cores (see mclapply)
 ##------------------------------------------------------------------------------
-prepareAOHData <- function(fileNames, fids , mc.cores)
+prepareAOHData <- function(fileNames, fids , mc.cores, vR_id, tR_id, filter)
 {
 	
 	print ("Reading VCFs and generating AOH data using CBS ...")
@@ -192,16 +200,9 @@ prepareAOHData <- function(fileNames, fids , mc.cores)
 				res <- NULL
 				tryCatch({
 							fileSNP<- fileNames[i]
-							dataSNP <- read.vcf.quick.noinfo(fileSNP)
-							# parsing genotype
-							gt<- do.call(rbind, strsplit(dataSNP[[9]], ":"))
-							vR <- gt[,2] # number of alt allele reads
-							tR <- gt[,4] # total number of reads
-							dataSNP[,vR:=as.numeric(vR)]
-							dataSNP[,tR:=as.numeric(tR)]
+							dataSNP <- read.vcf.quick.noinfo(fileSNP, vR_id, tR_id, filter)
 							dataSNP[,af:=(as.numeric(vR)/ as.numeric(tR))]
 							# Circular Binary Segmentation
-							dataSNP <- dataSNP[which(dataSNP$FILTER == "PASS"),]
 							dataSNP[,baf:=abs(af - 0.5)]				
 							CNA.obj = CNA(dataSNP$baf, dataSNP$CHROM, dataSNP$POS, data.type = "binary")
 							segment.obj = segment(CNA.obj,   verbose = 0)
@@ -320,7 +321,7 @@ processRPKM <- function(rpkmDtOrdered, bedOrdered, mc.cores, lowRPKMthreshold ,e
 	bedTmp <- bedOrdered[selectedExons,]
 	print("Calculating number of potential deletions for each sample (may take a while)...")
 	nrOfPotDeletions <- apply(tmp,1,  function(x){length( which(x<lowRPKMthreshold & bedTmp$V1 != "X"))})
-	print("Detetermining 5% of samples with the highest number of deletions")	
+	print("Detetermining 2% of samples with the highest number of deletions")	
 	toRemSamples <- which(nrOfPotDeletions> quantile(nrOfPotDeletions, 0.98))
 	print("Removing these samples (may take a while)...")
 	rpkmTmp <- rpkmDtOrdered[-toRemSamples,]
@@ -624,17 +625,21 @@ printBanner <- function()
 ##' @param mc.cores				number of cores 
 ##' @param aohRDataOut			temporary file that store AOH data
 ##' @param bedFile				target design file
-##' @param lowRPKMthreshold		RPKM threshold used in the algorithm (default=0.5)
+##' @param lowRPKMthreshold		RPKM threshold used in the algorithm (default=0.65)
 ##' @param minAOHsize			minimal size of AOH region (default=1000)
 ##' @param minAOHsig			threshold for calling AOH (default=0.45)
 ##' @param is_cmg				CMG specific annotations (default=FALSE)
+##' @param vR_id				ID for 'the number of variants reads' in VCF FORMAT column (default='VR')
+##' @param tR_id				ID for 'the number of total reads' in VCF FORMAT column (default='DP')
+##' @param filter				only variants with this value in the VCF FILTER column will be used in AOH analysis  
 ##------------------------------------------------------------------------------
 
 runHMZDelFinder <- function(snpPaths, snpFids,
 		rpkmPaths, rpkmFids,
 		mc.cores, aohRDataOut,
 		bedFile, lowRPKMthreshold,
-		minAOHsize, minAOHsig, is_cmg)
+		minAOHsize, minAOHsig, is_cmg, 
+		vR_id, tR_id, filter)
 {
 	
 	library(gdata)
@@ -646,8 +651,9 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 	## checking input parameters
 	if (!is.null(snpPaths) && any(!file.exists(snpPaths))){print("[ERROR]: One or more paths to VCF file does not exist."); return (NULL)}
 	if ( any(!file.exists(rpkmPaths))){print("[ERROR]: One or more paths to RPKM file does not exist."); return (NULL)}
-	if (!file.exists(bedFile)){print("[ERROR]: BED file does not exist.");return (NULL)}
+	if (is.null(bedFile) || !file.exists(bedFile)){print("[ERROR]: BED file does not exist.");return (NULL)}
 	if (length(rpkmPaths) != length(rpkmFids)){print("[ERROR]: Number of rpkmPaths differ from the number rpkmFids.");return (NULL)}
+	if (length(rpkmPaths) < 10){print("[ERROR]: Please provide at least 10 input files");return (NULL)}
 	if (!is.null(snpPaths) && length(snpPaths) != length(snpFids)){print("[ERROR]: Number of vcfPaths differ from the number vcfFids.");return (NULL)}
 	
 	
@@ -655,19 +661,14 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 	print("[step 1 out of 7] ******  AOH data ******")
 	
 	extAOH <- NULL
-	if (is.null(snpPaths) || is.null(snpFilds)){
-		print("Skipping AOH analysis ...")
-		
-	}
+	if (is.null(snpPaths) || is.null(snpFids)){print("Skipping AOH analysis ...")}
 	else{
 		#if (file.exists(aohRDataOut)){load(aohRDataOut)}else
 		#{
-			print("[step 1.5 out of 7] ****** Preparing AOH data ******")
 			library(DNAcopy)
-			extAOH <- prepareAOHData(snpPaths, snpFids, mc.cores)
+			extAOH <- prepareAOHData(snpPaths, snpFids, mc.cores, vR_id, tR_id, filter)
 			save(extAOH, file=aohRDataOut)
 		#}
-		
 	}
 		
 	print("[step 2 out of 7] ****** Preparing RPKM data ******")
