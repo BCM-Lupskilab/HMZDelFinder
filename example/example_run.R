@@ -129,7 +129,7 @@ write.csv(results$filteredCalls, paste0(outputDir,"hmzCalls.csv"), row.names=F )
 
 # plotting deletions
 lapply(1:nrow(results$filteredCalls),function(i){
-			plotDeletion (results$filteredCalls, i, results$bedOrdered, results$rpkmDtOrdered,  plotsDir, mainText=""  )})
+			plotDeletion (results$filteredCalls, i, results$bedOrdered, results$rpkmDtOrdered,  lowRPKMthreshold, plotsDir, mainText=""  )})
 	
 ## Selected columns from the results$filteredCalls object:					
 #					Chr     Start      Stop   Genes Start_idx     FID
