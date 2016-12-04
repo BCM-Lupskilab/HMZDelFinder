@@ -543,7 +543,7 @@ addLegend <- function(cand, trBlack, mainText="")
 ##' @param rpkmDtOrdered	rpkmDtOrdered object returned by runHMZDelFinder
 ##' @param outputDir		output directory
 ##------------------------------------------------------------------------------
-plotDeletion <- function(calls, i, bedOrdered, rpkmDtOrdered,  outputDir, mainText=""  ){
+plotDeletion <- function(calls, i, bedOrdered, rpkmDtOrdered, lowRPKMthreshold,  outputDir, mainText=""  ){
 	#library(Hmisc)
 	cand <- calls[i,]
 	alpha=0.5
@@ -578,8 +578,8 @@ plotDeletion <- function(calls, i, bedOrdered, rpkmDtOrdered,  outputDir, mainTe
 	}
 	lines(min(idx):max(idx), ll[which(rownames(rpkmDtOrdered)== cand$FID),], col="red",lwd=3, alpha=alpha)
 	matplot(t(matrix(rep(idx,2),ncol=2)), t(cbind(rep(0, length(idx)),as.numeric(ll[which(rownames(rpkmDtOrdered)== cand$FID),]))),add=T,type="l", col="red",lwd=3, lty=1)
-	abline(h=log(1.5, 10), lwd=3, lty=2, col="blue")
-	abline(h=log(2, 10), lwd=3, lty=2, col="blue")
+	abline(h=log(1+lowRPKMthreshold, 10), lwd=3, lty=2, col="blue")
+	abline(h=log(1+2*lowRPKMthreshold, 10), lwd=3, lty=2, col="blue")
 	genes <- unique(bedOrdered$V4[idx])
 	i <- 1
 	## plotting genes and exons
