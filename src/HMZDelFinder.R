@@ -54,7 +54,7 @@ read.vcf.quick.noinfo <- function(file, vR_id ,tR_id ,filter ){
 	tab2 <- strsplit(data[,ncol(data),with=F][[1]], ":") # SAMPLE
 	
 	vRtR <- do.call(rbind, lapply(1:length(tab), function(i){tab2[[i]][c(which(tab[[i]] == vR_id), which(tab[[i]]==tR_id))]}))
-	data$vR <- as.numeric(vRtR[,1])
+	data$vR <-  as.numeric(sapply(strsplit(vRtR[,1], ","), function(x){x[2]}))# parsing  Allelic Depth (AD) and extracting alt allele (GATK)
 	data$tR <- as.numeric(vRtR[,2])
 	#data$vR <- sapply(1:length(tab2), function(i){tab2[[i]][vRidx[i]]})
 	data
