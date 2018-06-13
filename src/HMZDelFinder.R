@@ -687,7 +687,7 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 	gc()
 	processRPKMResults <- processRPKM(rpkmDtOrdered, bedOrdered, mc.cores,lowRPKMthreshold,exonsToExclude,maxFrequency=maxFrequency)
 	selectedExonsFinal <- processRPKMResults[["selectedExonsFinal"]]
-	
+	if(length(selectedExonsFinal)==0) {return (NULL)}
 	
 	print("[step 4 out of 7] ****** DELETION CALLING ******")
 	candidateExonCalls <- getCandidateExonCalls (rpkmDtOrdered, bedOrdered, selectedExonsFinal, mc.cores,lowRPKMthreshold)
