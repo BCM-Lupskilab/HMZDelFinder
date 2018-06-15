@@ -46,7 +46,7 @@ read.vcf.header <- function(file){
 
 read.vcf.quick.noinfo <- function(file, vR_id ,tR_id ,filter ){
 	header <- read.vcf.header(file)
-	data <- fread(paste0(" bzcat ",file," | tail -n +",header$nlines," | cut -f1-7,9,10"), header=FALSE, stringsAsFactors=F, sep="\t")	
+	data <- fread(paste0("bzcat ",file," | tail -n +",header$nlines," | cut -f1-7,9,10"), header=FALSE, stringsAsFactors=F, sep="\t")	
 	setnames(data, header$header[-8])
 	
 	data <- data[which(data$FILTER == filter),]
