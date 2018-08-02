@@ -220,6 +220,7 @@ prepareAOHData <- function(fileNames, fids , mc.cores, vR_id, tR_id, filter)
 	# extends AOH by length of uncertain regions; note that new segments will overlap
 	extAOH <- rbindlist(mclapply2(1:length(unique(aoh$Name)), function(i){ nm <- unique(aoh$Name)[i]
 						tmpAOH <- aoh[aoh$Name == nm,]
+						tmpAOH$chrom <- gsub ("chr", "", tmpAOH$chrom)			      
 						tmpAOH <- tmpAOH[order(tmpAOH$chrom, tmpAOH$loc.start),]
 						newAOH <- rbindlist(lapply(c(1:22,"X","Y"), function(chr){
 											chrAOH <- tmpAOH[tmpAOH$chrom == chr, ]
