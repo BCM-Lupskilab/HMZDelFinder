@@ -505,8 +505,14 @@ calculateZscores <- function(filteredCalls,rpkmDtOrdered){
 				fid <- filteredCalls$FID[i]
 				sampleIdx <- which(rownames(rpkmDtOrdered) == fid)
 				position <- filteredCalls$Start_idx[i]
+				exon_num <- filteredCalls$Exon_num[i]
 				
-				mean(sapply(1:filteredCalls$Exon_num[i], function(j){
+				# Check for NA/NaN values in Exon_num
+				if (is.na(exon_num) || is.nan(exon_num) || exon_num < 1) {
+					return(NA)
+				}
+				
+				mean(sapply(1:exon_num, function(j){
 									#print (paste0("j=", j))
 									val <- mm[sampleIdx, position + j -1 ]
 									vv <- sort(mm[-sampleIdx, position + j -1])
@@ -709,15 +715,19 @@ runHMZDelFinder <- function(snpPaths, snpFids,
 	
 	print("[step 7 out of 7] ****** OVERLAPPING WITH AOH REGIONS AND FILTERING ******")
 	allCalls <- annotateAOH(candidatesMergedAnnotated, extAOH, minAOHsize, minAOHsig, mc.cores)
-	allCalls$ZScore <- calculateZscores(allCalls,rpkmDtOrdered)
+	if (nrow(allCalls) > 0) {
+		allCalls$ZScore <- calculateZscores(allCalls,rpkmDtOrdered)
+	}
 	gc();gc();
 	allCalls <- allCalls [order(allCalls$Length, decreasing=T),]
 	
 	## filtering out calls from low quality samples and calls that do not overlap with any AOH region
 	filteredCalls <- allCalls[which(allCalls[,paste("inAOH_",format(minAOHsize, scientific=F),sep=""),with=F] & !allCalls$PoorSample & allCalls$Length>50),]
-	filteredCalls <- annotateFreq(filteredCalls)
-	filteredCalls[,PerSampleNr:=.N,by=BAB]
-	filteredCalls$ZScore <- calculateZscores(filteredCalls,rpkmDtOrdered)
+	if (nrow(filteredCalls) > 0) {
+		filteredCalls <- annotateFreq(filteredCalls)
+		filteredCalls[,PerSampleNr:=.N,by=BAB]
+		filteredCalls$ZScore <- calculateZscores(filteredCalls,rpkmDtOrdered)
+	}
 	
 	results <- list (filteredCalls = filteredCalls, allCalls=allCalls, bedOrdered = bedOrdered, rpkmDtOrdered = rpkmDtOrdered)
 	
