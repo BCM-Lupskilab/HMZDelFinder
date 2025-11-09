@@ -87,7 +87,7 @@ Both objects are data.frames with the following columns:
 * PoorSample  <i>// TRUE if the number of calls in the sample > 98 quantile</i>
 * posKey      <i>// (chr+start+stop)</i>
 * key         <i>// (sampleId+chr+start+stop)</i>
-* inAOH_1000  <i>//  TRUE if deletion overlap with any AOH region greater than 1000bp</i>
+* inAOH_*     <i>// TRUE if deletion overlap with any AOH region greater than minAOHsize (e.g., inAOH_1000 when minAOHsize=1000)</i>
 * ZScore      <i>// z-score</i>
 * OverlapCnt  <i>// number of overlapping calls in other samples</i>
 * PerSampleNr <i>// number of calls in this sample</i>
