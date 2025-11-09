@@ -563,7 +563,9 @@ plotDeletion <- function(calls, i, bedOrdered, rpkmDtOrdered, lowRPKMthreshold, 
 	other_idx <- as.matrix(findOverlaps(cand_ir, calls_ir))[,2]
 	noAOH <- vector()
 	if (length(other_idx)>0){
-		noAOH <- calls$FID[other_idx][which(!calls$inAOH_1000[other_idx])]
+		# Dynamically detect the inAOH column name (e.g., inAOH_1000, inAOH_500, etc.)
+		inAOH_col <- grep("^inAOH_", names(calls), value=TRUE)[1]
+		noAOH <- calls$FID[other_idx][which(!calls[[inAOH_col]][other_idx])]
 	}
 	ll <- replaceInf(log(rpkmDtOrdered[,idx,with=F ] + 1, 10) )
 	ll2<- ll[-which(rownames(rpkmDtOrdered)%in% union(union(calls$FID[calls$PoorSample], cand$FID), noAOH)),] # removing poor quality samples
